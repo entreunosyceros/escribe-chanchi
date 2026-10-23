@@ -1,4 +1,4 @@
-# Escribe Chanchi - Editor de Markdown ✨
+# Escribe Chanchi - Editor de Markdown
 
 ![about-escribe-chanchi](https://github.com/user-attachments/assets/a400a351-5648-4979-a9ec-cd4f07d37565)
 
@@ -6,7 +6,7 @@ Este es un editor de Markdown desarrollado en C++ con Qt, que incluye sistema de
 
 ![GitHub](https://img.shields.io/badge/version-v1.6-blue) ![C++](https://img.shields.io/badge/language-C%2B%2B-blue) ![Qt](https://img.shields.io/badge/framework-Qt6-green) ![License](https://img.shields.io/badge/license-MIT-green)
 
-## 🎯 TL;DR (Resumen Ultra-Rápido)
+## TL;DR (Resumen Ultra-Rápido)
 ```bash
 # 1. Clonar repositorio
 git clone https://github.com/sapoclay/escribe-chanchi.git
@@ -22,18 +22,18 @@ sudo apt install build-essential qt5-default libqt5webkit5-dev libcmark-dev cmak
 # 4. Ejecutar automáticamente  
 ./ejecutar.sh
 
-# ¡Listo! 🚀 El editor se abre maximizado y listo para usar
+# ¡Listo! El editor se abre maximizado y listo para usar
 ```
 
-## 🚀 Instalación y Uso
+## Instalación y Uso
 
-### 📥 Paso 1: Clonar el Repositorio
+### Paso 1: Clonar el Repositorio
 ```bash
 git clone https://github.com/sapoclay/escribe-chanchi.git
 cd escribe-chanchi
 ```
 
-### 📦 Paso 2: Instalar Dependencias
+### Paso 2: Instalar Dependencias
 
 **Ubuntu/Debian:**
 ```bash
@@ -63,7 +63,7 @@ sudo pacman -S base-devel qt5-base qt5-webkit cmark cmake git
 ./compilar.sh clean     # Limpiar y recompilar todo
 ```
 
-### 🚀 Paso 4: Ejecutar
+### Paso 4: Ejecutar
 ```bash
 # Ejecutar automáticamente (detecta el ejecutable disponible)
 ./ejecutar.sh
@@ -71,7 +71,7 @@ sudo pacman -S base-devel qt5-base qt5-webkit cmark cmake git
 # El editor se abrirá maximizado y listo para usar
 ```
 
-### 📦 Instalar usando el paquete .DEB (RECOMENDADO)
+### Instalar usando el paquete .DEB (RECOMENDADO)
 ![lanzador-escribe-chanchi](https://github.com/user-attachments/assets/64d584a3-894b-495a-89cf-af69ec02ed16)
 
 **¡IMPORTANTE!** Usa el paquete **v1.6-2**. Necesita Qt 6 y libcmark. Si faltan librerías, `apt-get install -f` las instala. El paquete ya no depende de Qt WebEngine.
@@ -130,7 +130,7 @@ sudo dpkg -i escribe-chanchi_1.6-2_amd64.deb
 
 ## 🎯 Características Principales
 
-### ✨ **Funcionalidades Principales**
+###  **Funcionalidades Principales**
 - ✅ **Sistema de pestañas multi-documento** - Múltiples archivos simultáneamente con manejo inteligente
 - ✅ **Instancia única** - No se duplica al abrir desde el menú cuando está minimizado
 - ✅ **Búsqueda y reemplazo avanzado** - Con opciones de mayúsculas y palabras completas
@@ -438,8 +438,7 @@ Este proyecto está bajo licencia MIT. Ver archivo `LICENSE` para más detalles.
 
 ![logo_escribe_chanchi](https://github.com/user-attachments/assets/07667a04-1324-41e6-9059-7443e8680d77)
 
-**EscribeChanchi v1.6** - Editor de Markdown para mis cosicas - Creado por entreunosyceros ✨
+**EscribeChanchi v1.6.2** - Editor de Markdown para mis cosicas - Creado por entreunosyceros
 
-**📦 Repositorio:** https://github.com/sapoclay/escribe-chanchi
 
 
