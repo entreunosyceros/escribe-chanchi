@@ -428,7 +428,7 @@ cd escribe-chanchi
 
 Este proyecto está bajo licencia MIT. Ver archivo `LICENSE` para más detalles.
 
-## 🌟 Agradecimientos
+## Agradecimientos
 
 - **Qt Framework** - Por la excelente biblioteca de desarrollo
 - **libcmark** - Por el procesamiento robusto de Markdown
