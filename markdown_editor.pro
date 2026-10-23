@@ -1,4 +1,4 @@
-QT += core widgets gui printsupport
+QT += core widgets gui printsupport network
 
 CONFIG += c++11
 

@@ -1,2 +1,47 @@
+# Notas locales
 FUNCIONALIDADES_FUTURAS.md
+
+# Paquete y artefactos de distribución
 debian-package/
+*.deb
+*.AppImage
+
+# Compilación CMake
+/build/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CMakeUserPresets.json
+compile_commands.json
+
+# Compilación qmake
+/Makefile
+/.qmake.stash
+*.pro.user
+*.pro.user.*
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.o
+*.o.d
+*.obj
+
+# Binario generado en la raíz
+/markdown_editor
+/Escribe_Chanchi
+
+# Temporales
+*~
+*.swp
+*.swo
+.cache/
+
+# Código de pruebas y verificaciones locales
+/verificar_correccion.sh
+/ESTADO_FINAL*.md
+/test/
+*_test.cpp
+*_test.h
+.cursor/debug-*.log

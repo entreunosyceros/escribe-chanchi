@@ -71,19 +71,32 @@ sudo pacman -S base-devel qt5-base qt5-webkit cmark cmake git
 # El editor se abrirá maximizado y listo para usar
 ```
 
-### 📦 Instalar usando el paquete .DEB
+### 📦 Instalar usando el paquete .DEB (RECOMENDADO)
 ![lanzador-escribe-chanchi](https://github.com/user-attachments/assets/64d584a3-894b-495a-89cf-af69ec02ed16)
+
+**¡IMPORTANTE!** Para evitar problemas con la desinstalación que podrían afectar iconos de otras aplicaciones, asegúrate de usar la **versión corregida v1.6-2**.
 
 La opción más sencilla para probar este programa será usar el paquete .deb que he dejando en la [página de lanzamientos de este repositorio](https://github.com/sapoclay/escribe-chanchi/releases/tag/1.6_Versi%C3%B3n)
 
 Una vez descargado el paquete debería ser suficiente con abrir una terminal (Ctrl+Alt+T) y ejecutar en ella:
 ```bash
-sudo dpkg -i escribe_chanchi_*.deb
+# Para la versión corregida (recomendada):
+sudo dpkg -i escribe-chanchi_1.6-2_amd64.deb
 
-# En caso de haber algún problema con dependencias, deberían solucionarse escribiendo en la misma terminal:
-
+# En caso de haber algún problema con dependencias, deberían solucionarse escribiendo:
 sudo apt-get install -f
+
+# Si actualizas desde la versión 1.6-1, primero desinstala la anterior:
+sudo dpkg -r escribe-chanchi
+# Luego instala la nueva versión
+sudo dpkg -i escribe-chanchi_1.6-2_amd64.deb
 ```
+
+**🔒 Mejoras de Seguridad v1.6-2:**
+- ✅ Scripts de desinstalación corregidos para no afectar iconos de otras aplicaciones
+- ✅ Terminación segura de procesos durante la desinstalación
+- ✅ Limpieza selectiva solo de archivos propios
+- ✅ Soporte mejorado para purge completo de configuración
 
 ## 💡 Cómo Usar el Editor
 
@@ -117,30 +130,48 @@ sudo apt-get install -f
 ## 🎯 Características Principales
 
 ### ✨ **Funcionalidades Principales**
-- ✅ **Sistema de pestañas** - Múltiples archivos simultáneamente
+- ✅ **Sistema de pestañas multi-documento** - Múltiples archivos simultáneamente con manejo inteligente
+- ✅ **Instancia única** - No se duplica al abrir desde el menú cuando está minimizado
 - ✅ **Búsqueda y reemplazo avanzado** - Con opciones de mayúsculas y palabras completas
-- ✅ **Barra de herramientas mejorada** - Iconos descriptivos y búsqueda integrada
-- ✅ **76 emojis optimizados** - Ultra-básicos y universalmente compatibles
+- ✅ **Barra de herramientas renovada** - Iconos descriptivos dibujados con QPainter
+- ✅ **200+ emojis compatibles + personalizados** - Sistema extensible con persistencia
 - ✅ **Plantillas predefinidas** - Para blogs, documentos técnicos, README
 - ✅ **Modo claro/oscuro** - Alternancia con F11
-- ✅ **Vista previa en tiempo real** - Para archivos Markdown
-- ✅ **Exportación** - A HTML y PDF
+- ✅ **Vista previa en tiempo real** - Para archivos Markdown con soporte de tablas
+- ✅ **Exportación múltiple** - A HTML y PDF
 - ✅ **Bandeja del sistema** - Minimizado inteligente
+- ✅ **Sistema de numeración de líneas** - Activable/desactivable
+- ✅ **Gestión completa de archivos** - Crear, abrir, guardar, cerrar pestañas
+- ✅ **Renderizado avanzado de emojis** - CSS optimizado y fuentes específicas
+- ✅ **Soporte de tablas Markdown** - Procesamiento y renderizado personalizado
+- ✅ **Memoria compartida** - Para evitar múltiples instancias
+- ✅ **Servidor local** - Para comunicación entre intentos de apertura
 
 ### 📁 **Formatos Soportados**
-- **`.md`** - Markdown con vista previa en tiempo real
-- **`.txt`, `.cpp`, `.js`, `.py`, `.html`, `.css`, `.xml`, `.json`** - Editor de texto
-- **Cualquier archivo de texto** - Edición básica
+- **`.md`** - Markdown con vista previa en tiempo real y soporte completo de tablas
+- **`.txt`, `.cpp`, `.js`, `.py`, `.html`, `.css`, `.xml`, `.json`** - Editor de texto avanzado
+- **Cualquier archivo de texto** - Edición básica con sintaxis destacada
+
+### 🎨 **Características de Interfaz**
+- **Sistema de pestañas** con indicadores de modificación
+- **Splitter redimensionable** entre editor y vista previa
+- **Barra de herramientas completa** con iconos gráficos descriptivos
+- **Diálogos no modales** para búsqueda que permiten editar mientras se busca
+- **Vista previa HTML** con CSS optimizado para emojis y tablas
+- **Modo pantalla completa** disponible (F10)
+- **Ventana maximizada** por defecto para mejor experiencia
+- **Bandeja del sistema** con menú contextual
 
 ## ⌨️ Atajos de Teclado
 
 | Función | Atajo | Descripción |
 |---------|-------|-------------|
-| **� Archivos** | | |
+| **📁 Archivos** | | |
 | Nueva pestaña | `Ctrl+N` | Crear nuevo documento |
 | Abrir archivo | `Ctrl+O` | Abrir archivo existente |
 | Guardar | `Ctrl+S` | Guardar documento actual |
 | Guardar como | `Ctrl+Shift+S` | Guardar con nuevo nombre |
+| Cerrar pestaña | `Ctrl+W` | Cerrar pestaña actual |
 | **🔍 Búsqueda** | | |
 | Buscar | `Ctrl+F` | Abrir diálogo de búsqueda |
 | Buscar y reemplazar | `Ctrl+H` | Abrir diálogo de reemplazo |
@@ -150,10 +181,25 @@ sudo apt-get install -f
 | Negrita | `Ctrl+B` | Texto en **negrita** |
 | Cursiva | `Ctrl+I` | Texto en *cursiva* |
 | Código | `Ctrl+`` | Texto en `código` |
+| Tachado | `Ctrl+Shift+X` | Texto ~~tachado~~ |
+| Encabezado | `Ctrl+1` | # Encabezado |
+| Cita | `Ctrl+Q` | > Cita |
+| Bloque de código | `Ctrl+Shift+C` | ```código``` |
+| **📝 Listas y Estructura** | | |
+| Lista sin ordenar | `Ctrl+U` | • Lista |
+| Lista numerada | `Ctrl+Shift+U` | 1. Lista |
+| Enlace | `Ctrl+L` | [texto](enlace) |
+| Imagen | `Ctrl+Shift+I` | ![alt](imagen) |
+| Tabla | `Ctrl+T` | Insertar tabla |
+| Línea horizontal | `Ctrl+Shift+H` | --- |
 | **🎨 Especiales** | | |
 | Insertar emoji | `Ctrl+E` | Abrir selector de emojis |
+| Plantilla | `Ctrl+Shift+T` | Usar plantilla |
+| Nueva plantilla | `Ctrl+Shift+N` | Crear plantilla |
+| **🖥️ Vista** | | |
 | Modo oscuro | `F11` | Alternar tema claro/oscuro |
 | Pantalla completa | `F10` | Ocultar barras de ventana |
+| Números de línea | `Ctrl+Shift+L` | Mostrar/ocultar numeración |
 
 ## 🔧 Compilación Avanzada
 
@@ -246,16 +292,23 @@ Acceso rápido:
 - ✅ **Diálogos no modales** - Permite editar mientras se busca
 
 ### 😀 **Sistema de Emojis Optimizado**
-**76 emojis ultra-básicos y universalmente compatibles**
+**200+ emojis básicos compatibles + sistema de emojis personalizados**
 
 Acceso: `Ctrl+E` o botón :) en la barra de herramientas
 
-**Filosofía:** Calidad sobre cantidad - Menos emojis, pero todos funcionan perfectamente.
+**Filosofía:** Calidad sobre cantidad - Emojis que funcionan perfectamente en todos los sistemas.
+
+**Nuevas características v1.6:**
+- ✅ **Gestión de emojis personalizados** - Agregar y eliminar emojis propios
+- ✅ **Persistencia** - Los emojis personalizados se guardan automáticamente
+- ✅ **Renderizado mejorado** - CSS específico para emojis en vista previa
+- ✅ **Fuentes optimizadas** - Soporte para Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji
 
 **Ejemplos incluidos:**
 - **Caras:** 😀 😃 😄 😁 😆 😊 😍 😘 😎 😛 😐 😒 😔 😢 😭 😠 😡 😳 😴 😷
-- **Corazones:** ❤ 💛 💚 💙 💜 🖤 💔 💕 💖 💗
-- **Símbolos:** ⭐ ✨ 🌟 ☀ 🌙 ✅ ❌ ⭕ ❗ ❓ 💯
+- **Corazones:** ❤️ 💛 💚 💙 💜 🖤 💔 💕 💖 💗 💞 💘
+- **Símbolos:** ⭐ ✨ 🌟 ☀️ 🌙 ✅ ❌ ⭕ ❗ ❓ 💯 🔥
+- **Gestos:** 👍 👎 👌 👊 ✊ ✌️ 👋 ✋ 👐 🙌 🙏 👏 💪
 
 ### 🔧 **Barra de Herramientas Mejorada**
 **Completamente renovada con iconos descriptivos dibujados con QPainter**
@@ -303,10 +356,21 @@ Acceso: `Ctrl+E` o botón :) en la barra de herramientas
 
 ## 📝 Notas de Desarrollo
 
-### Versión Actual (v1.6)
-- ✅ **Barra de herramientas completamente renovada** con iconos descriptivos
-- ✅ **Botones de búsqueda integrados** en la barra de herramientas  
+### Versión Actual (v1.6-2)
+- ✅ **CORRECCIÓN CRÍTICA:** Scripts de desinstalación seguros que no afectan iconos de otras aplicaciones
+- ✅ **Sistema de instancia única** - Evita múltiples procesos usando QSharedMemory y QLocalServer
+- ✅ **200+ emojis compatibles** con sistema de emojis personalizados y persistencia
+- ✅ **Renderizado avanzado de emojis** - CSS específico con fuentes optimizadas
+- ✅ **Sistema de pestañas completo** - Múltiples documentos con indicadores de modificación
+- ✅ **Barra de herramientas renovada** con iconos descriptivos dibujados con QPainter
+- ✅ **Búsqueda y reemplazo avanzado** - Diálogos no modales con opciones completas
+- ✅ **Soporte completo de tablas Markdown** - Procesamiento y renderizado personalizado
+- ✅ **Plantillas predefinidas** y sistema para crear plantillas personalizadas
+- ✅ **Bandeja del sistema** con minimizado inteligente y menú contextual
 - ✅ **Scripts inteligentes** de compilación y ejecución automática
+- ✅ **Gestión avanzada de archivos** - Crear, abrir, guardar, cerrar pestañas
+- ✅ **Numeración de líneas** activable/desactivable
+- ✅ **Modo pantalla completa** y ventana maximizada por defecto
 - ✅ **Eliminación de dependencias Unicode** para iconos problemáticos
 - ✅ **Documentación reorganizada** y simplificada
 

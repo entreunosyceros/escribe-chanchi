@@ -13,6 +13,7 @@
 #include <QAction>
 #include <QStringList>
 #include <QList>
+#include <QLocalServer>
 
 class QCloseEvent;
 
@@ -37,6 +38,8 @@ private slots:
     void onTextChanged();
     void openRecentFile();
     void updateRecentFileActions();
+    void handleNewConnection();
+    void restoreFromTray();
 
 private:
     QTextEdit *textEdit;
@@ -65,7 +68,10 @@ private:
     bool maybeSave();
     void setCurrentFile(const QString &fileName);
     void updateWindowTitle();
-    
+    void setupSingleInstance();
+
+    QLocalServer *localServer;
+
 protected:
     void closeEvent(QCloseEvent *event) override;
 };

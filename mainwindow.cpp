@@ -15,12 +15,15 @@
 #include <QStatusBar>
 #include <QApplication>
 #include <QRegularExpression>
+#include <QLocalSocket>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , currentFilePath("")
     , isModified(false)
+    , localServer(nullptr)
 {
+    setupSingleInstance();
     setupUI();
     setupMenuBar();
     setupRecentFilesMenu();
@@ -38,6 +41,10 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     saveRecentFiles();
+    if (localServer) {
+        localServer->close();
+        delete localServer;
+    }
 }
 
 void MainWindow::setupUI()
@@ -439,4 +446,38 @@ void MainWindow::closeEvent(QCloseEvent *event)
     } else {
         event->ignore();
     }
+}
+
+void MainWindow::setupSingleInstance()
+{
+    localServer = new QLocalServer(this);
+    connect(localServer, &QLocalServer::newConnection, this, &MainWindow::handleNewConnection);
+    
+    if (!localServer->listen("EscribeChanchi_Server")) {
+        // Si no puede crear el servidor, puede ser que ya exista
+        localServer->removeServer("EscribeChanchi_Server");
+        localServer->listen("EscribeChanchi_Server");
+    }
+}
+
+void MainWindow::handleNewConnection()
+{
+    QLocalSocket *socket = localServer->nextPendingConnection();
+    if (socket) {
+        connect(socket, &QLocalSocket::readyRead, [this, socket]() {
+            QByteArray data = socket->readAll();
+            if (data == "SHOW_WINDOW") {
+                restoreFromTray();
+            }
+            socket->disconnectFromServer();
+        });
+    }
+}
+
+void MainWindow::restoreFromTray()
+{
+    show();
+    raise();
+    activateWindow();
+    setWindowState(windowState() & ~Qt::WindowMinimized);
 }

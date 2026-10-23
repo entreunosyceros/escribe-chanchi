@@ -22,17 +22,21 @@
 #include <QPainter>
 #include <QTextBlock>
 #include <QInputDialog>
-#include <QSpinBox>
-#include <QFormLayout>
 #include <QRegularExpression>
 #include <QTabWidget>
 #include <QMessageBox>
 #include <QFileInfo>
 #include <QCloseEvent>
-#include <QSystemTrayIcon>
-#include <QMenu>
 #include <QLineEdit>
-#include <QCheckBox>
+#include <QSystemTrayIcon>
+#include <QSpinBox>
+#include <QFormLayout>
+#include <QStandardPaths>
+#include <QDir>
+#include <QListWidget>
+#include <QLocalServer>
+#include <QLocalSocket>
+#include <QByteArray>
 #include "markdown_formatter.h"
 #include "template_manager.h"
 
@@ -55,6 +59,10 @@ class MarkdownEditor : public QMainWindow {
 
 public:
     explicit MarkdownEditor(QWidget *parent = nullptr);
+    bool openFilePath(const QString &filePath);
+
+    static const char *singleInstanceServerName() { return "EscribeChanchi_Server"; }
+    static const char *singleInstanceKey() { return "EscribeChanchi_SingleInstance"; }
 
 private slots:
     void toggleDarkMode();
@@ -80,18 +88,27 @@ private slots:
     void showAbout();          // Mostrar ventana Acerca de
     void toggleLineNumbers();  // Alternar numeración de líneas
     void updateLineNumbers();  // Actualizar numeración de líneas
-    void toggleFullScreen();   // Alternar pantalla completa
     void showTemplates();      // Mostrar plantillas
     void createTemplate();     // Crear nueva plantilla
     void insertEmoji();        // Insertar emoji
     
-    // Funcionalidades de búsqueda y reemplazo
-    void showFindDialog();     // Mostrar diálogo de búsqueda
-    void showReplaceDialog();  // Mostrar diálogo de reemplazo
-    void findNext();           // Buscar siguiente
-    void findPrevious();       // Buscar anterior
-    void replaceNext();        // Reemplazar siguiente
-    void replaceAll();         // Reemplazar todo
+    // Slots para sistema de búsqueda y bandeja del sistema
+    void setupSystemTray();
+    void createTrayIcon();
+    void showFromTray();
+    void hideToTray();
+    void trayIconActivated(QSystemTrayIcon::ActivationReason reason);
+    void exitApplication();
+    void toggleFullScreen();
+    // Slots para búsqueda y reemplazo
+    void showFindDialog();
+    void showReplaceDialog();
+    void findNext();
+    void findPrevious();
+    void replaceNext();
+    void replaceAll();
+    void manageCustomEmojis();  // Gestionar emojis personalizados
+
     
     // Slots para manejo de pestañas
     void newTab();             // Crear nueva pestaña
@@ -102,12 +119,6 @@ private slots:
     void saveCurrentFile();    // Guardar archivo actual
     void saveFileAs();         // Guardar como
     void documentModified();   // Documento modificado
-    
-    // Slots para la bandeja del sistema
-    void showFromTray();       // Mostrar ventana desde la bandeja
-    void hideToTray();         // Minimizar a la bandeja
-    void trayIconActivated(QSystemTrayIcon::ActivationReason reason);
-    void exitApplication();   // Salir completamente de la aplicación
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -140,37 +151,46 @@ private:
     bool darkMode;
     bool showLineNumbers;
     int untitledCounter;       // Contador para archivos sin título
-    bool isFullScreenMode;     // Estado de pantalla completa
-    
-    // Variables para búsqueda y reemplazo
-    QDialog *findDialog;       // Diálogo de búsqueda
-    QDialog *replaceDialog;    // Diálogo de reemplazo
-    QLineEdit *findLineEdit;   // Campo de texto para búsqueda
-    QLineEdit *replaceLineEdit; // Campo de texto para reemplazo
-    QString lastSearchText;    // Último texto buscado
-    bool caseSensitive;        // Búsqueda sensible a mayúsculas
-    bool wholeWords;           // Buscar solo palabras completas
-    
-    // Variables para la bandeja del sistema
-    QSystemTrayIcon *trayIcon;
-    QMenu *trayIconMenu;
-    QAction *showAction;
-    QAction *hideAction;
-    QAction *exitAction;
-
-    // Funciones para la bandeja del sistema
-    void setupSystemTray();
-    void createTrayIcon();
-    
-    // Funciones para manejo de tipos de archivo
-    QString getFileType(const QString& filePath);
-    bool isMarkdownFile(const QString& filePath);
-    bool shouldRenderPreview(const QString& filePath);
 
     // Backward compatibility (se eliminarán)
     QTextEdit *editor;         // Apunta al editor actual
     QTextBrowser *browser;     // Apunta al browser actual
     QSplitter *splitter;       // Apunta al splitter actual
+
+    // Miembros para sistema de bandeja y búsqueda
+    bool isFullScreenMode;
+    bool forceQuit = false;
+    QSystemTrayIcon *trayIcon;
+    QMenu *trayIconMenu;
+    QAction *showAction;
+    QAction *hideAction;
+    QAction *exitAction;
+    QDialog *findDialog;
+    QDialog *replaceDialog;
+    QLineEdit *findLineEdit;
+    QLineEdit *replaceLineEdit;
+    bool caseSensitive;
+    bool wholeWords;
+    QString lastSearchText;
+    QStringList customEmojis;  // Lista de emojis personalizados
+
+    // Miembros para sistema de instancia única
+    QLocalServer *localServer;
+    
+    // Funciones para instancia única
+    void setupSingleInstance();
+    void handleNewConnection();
+    void ingestInstanceData(QByteArray *buffer);
+    void restoreFromTray();
+    void applyPreviewMode(TabDocument *doc);
+
+    // Funciones helper declaradas en .cpp
+    QString getFileType(const QString &filePath);
+    bool isMarkdownFile(const QString &filePath);
+    bool shouldRenderPreview(const QString &filePath);
+    void loadCustomEmojis();
+    void saveCustomEmojis();
+    QString getCustomEmojiPath();
 };
 
 #endif // MARKDOWN_EDITOR_H

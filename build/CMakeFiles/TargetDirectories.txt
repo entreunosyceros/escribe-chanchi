@@ -1,5 +1,0 @@
-/var/www/html/C++/markdown/build/CMakeFiles/Escribe_Chanchi.dir
-/var/www/html/C++/markdown/build/CMakeFiles/edit_cache.dir
-/var/www/html/C++/markdown/build/CMakeFiles/rebuild_cache.dir
-/var/www/html/C++/markdown/build/CMakeFiles/Escribe_Chanchi_autogen_timestamp_deps.dir
-/var/www/html/C++/markdown/build/CMakeFiles/Escribe_Chanchi_autogen.dir

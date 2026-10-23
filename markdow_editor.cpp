@@ -28,13 +28,16 @@
 #include <QDesktopServices>
 #include <QUrl>
 #include <cmark.h>
+#include <QDataStream>
+#include <QBuffer>
+#include <QStatusBar>
 
 MarkdownEditor::MarkdownEditor(QWidget *parent) 
     : QMainWindow(parent), darkMode(false), showLineNumbers(false), untitledCounter(1),
       isFullScreenMode(false), formatter(nullptr), editor(nullptr), browser(nullptr), 
       splitter(nullptr), trayIcon(nullptr), trayIconMenu(nullptr), findDialog(nullptr),
       replaceDialog(nullptr), findLineEdit(nullptr), replaceLineEdit(nullptr),
-      caseSensitive(false), wholeWords(false) {
+      caseSensitive(false), wholeWords(false), localServer(nullptr) {
     
     // Crear el widget central
     QWidget *centralWidget = new QWidget(this);
@@ -66,6 +69,9 @@ MarkdownEditor::MarkdownEditor(QWidget *parent)
     
     // Configurar la bandeja del sistema
     setupSystemTray();
+    
+    // Cargar emojis personalizados
+    loadCustomEmojis();
 
     // Conectar señales del tab widget
     connect(tabWidget, &QTabWidget::currentChanged, this, &MarkdownEditor::tabChanged);
@@ -82,6 +88,9 @@ MarkdownEditor::MarkdownEditor(QWidget *parent)
     
     // Asegurar que la ventana no esté en modo pantalla completa al inicio
     isFullScreenMode = false;
+
+    // El servidor se abre cuando la interfaz ya puede cargar documentos
+    setupSingleInstance();
 }
 
 void MarkdownEditor::setupMenuBar() {
@@ -131,7 +140,7 @@ void MarkdownEditor::setupMenuBar() {
     
     QAction* exitAction = new QAction("Salir", this);
     exitAction->setShortcut(QKeySequence::Quit);
-    connect(exitAction, &QAction::triggered, this, &QWidget::close);
+    connect(exitAction, &QAction::triggered, this, &MarkdownEditor::exitApplication);
     fileMenu->addAction(exitAction);
 
     // Menú Editar
@@ -195,7 +204,7 @@ void MarkdownEditor::setupMenuBar() {
     
     // Encabezados
     QAction* headerAction = new QAction("&Encabezado", this);
-    headerAction->setShortcut(QKeySequence("Ctrl+H"));
+    headerAction->setShortcut(QKeySequence("Ctrl+1"));
     connect(headerAction, &QAction::triggered, this, &MarkdownEditor::setHeader);
     formatMenu->addAction(headerAction);
     
@@ -234,7 +243,7 @@ void MarkdownEditor::setupMenuBar() {
     
     // Otros elementos
     QAction* blockquoteAction = new QAction("&Cita", this);
-    blockquoteAction->setShortcut(QKeySequence("Ctrl+Q"));
+    blockquoteAction->setShortcut(QKeySequence("Ctrl+Shift+Q"));
     connect(blockquoteAction, &QAction::triggered, this, &MarkdownEditor::setBlockquote);
     formatMenu->addAction(blockquoteAction);
     
@@ -268,6 +277,7 @@ void MarkdownEditor::setupMenuBar() {
     QMenu* viewMenu = this->menuBar()->addMenu("Ver");
     
     QAction* toggleModeAction = new QAction("Alternar Modo Oscuro", this);
+    toggleModeAction->setShortcut(QKeySequence("Ctrl+Shift+D"));
     connect(toggleModeAction, &QAction::triggered, this, &MarkdownEditor::toggleDarkMode);
     viewMenu->addAction(toggleModeAction);
     
@@ -419,17 +429,14 @@ void MarkdownEditor::setupToolBar() {
     // Sección de pestañas
     QAction* newTabAction = mainToolBar->addAction(createTextIcon("+", QFont("Arial", 16, QFont::Bold), QColor(50, 150, 50)), "Nueva");
     newTabAction->setToolTip("Nueva pestaña (Ctrl+N)");
-    newTabAction->setShortcut(QKeySequence::New);
     connect(newTabAction, &QAction::triggered, this, &MarkdownEditor::newTab);
     
     QAction* openTabAction = mainToolBar->addAction(createGraphicIcon("folder", QColor(80, 120, 200)), "Abrir");
     openTabAction->setToolTip("Abrir archivo (Ctrl+O)");
-    openTabAction->setShortcut(QKeySequence::Open);
     connect(openTabAction, &QAction::triggered, this, &MarkdownEditor::openFileInNewTab);
     
     QAction* saveTabAction = mainToolBar->addAction(createGraphicIcon("save", QColor(100, 100, 200)), "Guardar");
     saveTabAction->setToolTip("Guardar archivo (Ctrl+S)");
-    saveTabAction->setShortcut(QKeySequence::Save);
     connect(saveTabAction, &QAction::triggered, this, &MarkdownEditor::saveCurrentFile);
     
     mainToolBar->addSeparator();
@@ -437,22 +444,18 @@ void MarkdownEditor::setupToolBar() {
     // Sección de búsqueda
     QAction* findAction = mainToolBar->addAction(createGraphicIcon("search", QColor(200, 100, 50)), "Buscar");
     findAction->setToolTip("Buscar texto (Ctrl+F)");
-    findAction->setShortcut(QKeySequence::Find);
     connect(findAction, &QAction::triggered, this, &MarkdownEditor::showFindDialog);
     
     QAction* replaceAction = mainToolBar->addAction(createGraphicIcon("replace", QColor(180, 120, 50)), "Reemplazar");
     replaceAction->setToolTip("Buscar y reemplazar (Ctrl+H)");
-    replaceAction->setShortcut(QKeySequence::Replace);
     connect(replaceAction, &QAction::triggered, this, &MarkdownEditor::showReplaceDialog);
     
     QAction* findPrevAction = mainToolBar->addAction(createGraphicIcon("prev", QColor(150, 100, 150)), "Anterior");
     findPrevAction->setToolTip("Buscar anterior (Shift+F3)");
-    findPrevAction->setShortcut(QKeySequence::FindPrevious);
     connect(findPrevAction, &QAction::triggered, this, &MarkdownEditor::findPrevious);
     
     QAction* findNextAction = mainToolBar->addAction(createGraphicIcon("next", QColor(100, 150, 100)), "Siguiente");
     findNextAction->setToolTip("Buscar siguiente (F3)");
-    findNextAction->setShortcut(QKeySequence::FindNext);
     connect(findNextAction, &QAction::triggered, this, &MarkdownEditor::findNext);
     
     mainToolBar->addSeparator();
@@ -460,26 +463,22 @@ void MarkdownEditor::setupToolBar() {
     // Sección de formato de texto
     QAction* boldAction = mainToolBar->addAction(createTextIcon("B", QFont("Arial", 10, QFont::Bold), QColor(60, 60, 60)), "Negrita");
     boldAction->setToolTip("Negrita (Ctrl+B)");
-    boldAction->setShortcut(QKeySequence::Bold);
     connect(boldAction, &QAction::triggered, this, &MarkdownEditor::setBold);
     
     QFont italicFont("Arial", 10);
     italicFont.setItalic(true);
     QAction* italicAction = mainToolBar->addAction(createTextIcon("I", italicFont, QColor(80, 80, 80)), "Cursiva");
     italicAction->setToolTip("Cursiva (Ctrl+I)");
-    italicAction->setShortcut(QKeySequence::Italic);
     connect(italicAction, &QAction::triggered, this, &MarkdownEditor::setItalic);
     
     QAction* codeAction = mainToolBar->addAction(createTextIcon("</\\>", QFont("Courier", 7), QColor(120, 80, 120)), "Código");
     codeAction->setToolTip("Código inline (Ctrl+`)");
-    codeAction->setShortcut(QKeySequence("Ctrl+`"));
     connect(codeAction, &QAction::triggered, this, &MarkdownEditor::setCode);
     
     QFont strikeFont("Arial", 10);
     strikeFont.setStrikeOut(true);
     QAction* strikeAction = mainToolBar->addAction(createTextIcon("S", strikeFont, QColor(150, 80, 80)), "Tachado");
     strikeAction->setToolTip("Tachado (Ctrl+Shift+X)");
-    strikeAction->setShortcut(QKeySequence("Ctrl+Shift+X"));
     connect(strikeAction, &QAction::triggered, this, &MarkdownEditor::setStrikethrough);
     
     mainToolBar->addSeparator();
@@ -487,17 +486,14 @@ void MarkdownEditor::setupToolBar() {
     // Sección de encabezados y estructura
     QAction* headerAction = mainToolBar->addAction(createTextIcon("H1", QFont("Arial", 8, QFont::Bold), QColor(50, 100, 200)), "Título");
     headerAction->setToolTip("Encabezado (Ctrl+1)");
-    headerAction->setShortcut(QKeySequence("Ctrl+1"));
     connect(headerAction, &QAction::triggered, this, &MarkdownEditor::setHeader);
     
     QAction* quoteAction = mainToolBar->addAction(createTextIcon("\"", QFont("Arial", 16, QFont::Bold), QColor(100, 150, 100)), "Cita");
-    quoteAction->setToolTip("Cita (Ctrl+Q)");
-    quoteAction->setShortcut(QKeySequence("Ctrl+Q"));
+    quoteAction->setToolTip("Cita (Ctrl+Shift+Q)");
     connect(quoteAction, &QAction::triggered, this, &MarkdownEditor::setBlockquote);
     
     QAction* codeBlockAction = mainToolBar->addAction(createTextIcon("{ }", QFont("Courier", 8), QColor(120, 80, 120)), "Bloque");
-    codeBlockAction->setToolTip("Bloque de código (Ctrl+Shift+C)");
-    codeBlockAction->setShortcut(QKeySequence("Ctrl+Shift+C"));
+    codeBlockAction->setToolTip("Bloque de código (Ctrl+Shift+`)");
     connect(codeBlockAction, &QAction::triggered, this, &MarkdownEditor::setCodeBlock);
     
     mainToolBar->addSeparator();
@@ -505,12 +501,10 @@ void MarkdownEditor::setupToolBar() {
     // Sección de listas
     QAction* unorderedListAction = mainToolBar->addAction(createTextIcon("•", QFont("Arial", 16)), "Lista");
     unorderedListAction->setToolTip("Lista sin ordenar (Ctrl+U)");
-    unorderedListAction->setShortcut(QKeySequence("Ctrl+U"));
     connect(unorderedListAction, &QAction::triggered, this, &MarkdownEditor::setUnorderedList);
     
     QAction* orderedListAction = mainToolBar->addAction(createTextIcon("1.", QFont("Arial", 10, QFont::Bold)), "Números");
-    orderedListAction->setToolTip("Lista numerada (Ctrl+Shift+U)");
-    orderedListAction->setShortcut(QKeySequence("Ctrl+Shift+U"));
+    orderedListAction->setToolTip("Lista numerada (Ctrl+Shift+O)");
     connect(orderedListAction, &QAction::triggered, this, &MarkdownEditor::setOrderedList);
     
     mainToolBar->addSeparator();
@@ -518,27 +512,22 @@ void MarkdownEditor::setupToolBar() {
     // Sección de enlaces y medios
     QAction* linkAction = mainToolBar->addAction(createGraphicIcon("link", QColor(50, 120, 200)), "Enlace");
     linkAction->setToolTip("Insertar enlace (Ctrl+L)");
-    linkAction->setShortcut(QKeySequence("Ctrl+L"));
     connect(linkAction, &QAction::triggered, this, &MarkdownEditor::setLink);
     
     QAction* imageAction = mainToolBar->addAction(createTextIcon("IMG", QFont("Arial", 8, QFont::Bold), QColor(120, 80, 150)), "Imagen");
     imageAction->setToolTip("Insertar imagen (Ctrl+Shift+I)");
-    imageAction->setShortcut(QKeySequence("Ctrl+Shift+I"));
     connect(imageAction, &QAction::triggered, this, &MarkdownEditor::setImage);
     
     QAction* tableAction = mainToolBar->addAction(createTextIcon("TBL", QFont("Arial", 8, QFont::Bold), QColor(100, 100, 150)), "Tabla");
     tableAction->setToolTip("Insertar tabla (Ctrl+T)");
-    tableAction->setShortcut(QKeySequence("Ctrl+T"));
     connect(tableAction, &QAction::triggered, this, &MarkdownEditor::insertTable);
     
     QAction* hrAction = mainToolBar->addAction(createTextIcon("---", QFont("Arial", 8, QFont::Bold)), "Línea");
     hrAction->setToolTip("Línea horizontal (Ctrl+Shift+H)");
-    hrAction->setShortcut(QKeySequence("Ctrl+Shift+H"));
     connect(hrAction, &QAction::triggered, this, &MarkdownEditor::setHorizontalRule);
     
     QAction* emojiAction = mainToolBar->addAction(createTextIcon(":)", QFont("Arial", 12, QFont::Bold), QColor(200, 150, 50)), "Emoji");
     emojiAction->setToolTip("Insertar emoji (Ctrl+E)");
-    emojiAction->setShortcut(QKeySequence("Ctrl+E"));
     connect(emojiAction, &QAction::triggered, this, &MarkdownEditor::insertEmoji);
     
     mainToolBar->addSeparator();
@@ -546,31 +535,26 @@ void MarkdownEditor::setupToolBar() {
     // Sección de plantillas
     QAction* templatesAction = mainToolBar->addAction(createGraphicIcon("template", QColor(120, 150, 80)), "Plantilla");
     templatesAction->setToolTip("Usar plantilla (Ctrl+Shift+T)");
-    templatesAction->setShortcut(QKeySequence("Ctrl+Shift+T"));
     connect(templatesAction, &QAction::triggered, this, &MarkdownEditor::showTemplates);
     
     QAction* newTemplateAction = mainToolBar->addAction(createTextIcon("NEW", QFont("Arial", 8, QFont::Bold), QColor(80, 150, 120)), "Nueva");
     newTemplateAction->setToolTip("Crear plantilla (Ctrl+Shift+N)");
-    newTemplateAction->setShortcut(QKeySequence("Ctrl+Shift+N"));
     connect(newTemplateAction, &QAction::triggered, this, &MarkdownEditor::createTemplate);
     
     mainToolBar->addSeparator();
     
     // Sección de vista
     QAction* darkModeAction = mainToolBar->addAction(createGraphicIcon("dark", QColor(80, 80, 150)), "Oscuro");
-    darkModeAction->setToolTip("Alternar modo oscuro (F11)");
-    darkModeAction->setShortcut(QKeySequence("F11"));
+    darkModeAction->setToolTip("Alternar modo oscuro (Ctrl+Shift+D)");
     connect(darkModeAction, &QAction::triggered, this, &MarkdownEditor::toggleDarkMode);
     
     QAction* lineNumbersAction = mainToolBar->addAction(createTextIcon("#", QFont("Arial", 12, QFont::Bold)), "Números");
     lineNumbersAction->setToolTip("Mostrar números de línea (Ctrl+Shift+L)");
-    lineNumbersAction->setShortcut(QKeySequence("Ctrl+Shift+L"));
     lineNumbersAction->setCheckable(true);
     connect(lineNumbersAction, &QAction::triggered, this, &MarkdownEditor::toggleLineNumbers);
     
     QAction* fullScreenAction = mainToolBar->addAction(createTextIcon("[ ]", QFont("Arial", 10, QFont::Bold)), "Pantalla");
-    fullScreenAction->setToolTip("Alternar pantalla completa (F10)");
-    fullScreenAction->setShortcut(QKeySequence("F10"));
+    fullScreenAction->setToolTip("Alternar pantalla completa (F11)");
     fullScreenAction->setCheckable(true);
     connect(fullScreenAction, &QAction::triggered, this, &MarkdownEditor::toggleFullScreen);
 }
@@ -648,10 +632,13 @@ void MarkdownEditor::setCodeBlock() {
 }
 
 void MarkdownEditor::insertEmoji() {
+    // Cargar emojis personalizados
+    loadCustomEmojis();
+    
     // Crear un diálogo para seleccionar emojis
     QDialog* emojiDialog = new QDialog(this);
-    emojiDialog->setWindowTitle("Insertar Emoji - Básicos Compatibles");
-    emojiDialog->setFixedSize(500, 400);
+    emojiDialog->setWindowTitle("Insertar Emoji - Compatibles + Personalizados");
+    emojiDialog->setFixedSize(600, 500);
     emojiDialog->setModal(true);
     
     // Configurar estilo del diálogo con fondo claro para mejor visibilidad de emojis
@@ -699,41 +686,34 @@ void MarkdownEditor::insertEmoji() {
     QWidget* emojiWidget = new QWidget();
     QGridLayout* emojiLayout = new QGridLayout(emojiWidget);
     
-    // Lista de emojis ultra-básicos y estables (verificados en consola)
+    // Lista de emojis actualizada según listado completo proporcionado
     QStringList emojis;
+    emojis << "😄" << "😆" << "😊" << "😃" << "☺️" << "😏" << "😍" << "😘"
+           << "😚" << "😳" << "😌" << "😁" << "😉" << "😜" << "😝" << "😀"
+           << "😗" << "😙" << "😛" << "😴" << "😟" << "😦" << "😧" << "😮"
+           << "😬" << "😕" << "😯" << "😑" << "😒" << "😅" << "😓" << "😥"
+           << "😩" << "😔" << "😞" << "😖" << "😨" << "😰" << "😣" << "😢"
+           << "😭" << "😂" << "😲" << "😱" << "😫" << "😠" << "😡" << "😤"
+           << "😪" << "😋" << "😷" << "😎" << "😵" << "👿" << "😈" << "😐"
+           << "😶" << "😇" << "👽" << "💛" << "💙" << "💜" << "❤️" << "💚"
+           << "💔" << "💓" << "💗" << "💕" << "💞" << "💘" << "💖" << "✨"
+           << "⭐" << "🌟" << "💫" << "💥" << "💢" << "❗" << "❓" << "❕"
+           << "❔" << "💤" << "💨" << "💦" << "🎶" << "🎵" << "🔥" << "💩"
+           << "👍" << "👎" << "👌" << "👊" << "✊" << "✌️" << "👋" << "✋"
+           << "👐" << "☝️" << "👇" << "👈" << "👉" << "🙌" << "🙏" << "👆"
+           << "👏" << "💪" << "🤘" << "🖕" << "🚶" << "🏃" << "👫" << "👪"
+           << "👬" << "👭" << "💃" << "👯" << "🙆‍♀️" << "🙅" << "💁" << "🙋"
+           << "👰‍♀️" << "🙇" << "💏" << "💑" << "💆" << "💇" << "💅" << "👦"
+           << "👧" << "👩" << "👨" << "👶" << "👵" << "👴" << "👲" << "👳‍♂️"
+           << "👷" << "👮" << "👼" << "👸" << "😺" << "😸" << "😻" << "😽"
+           << "😼" << "🙀" << "😿" << "😹" << "😾" << "👹" << "👺" << "🙈"
+           << "🙉" << "🙊" << "💂‍♂️" << "💀" << "🐾" << "👄" << "💋" << "💧"
+           << "👂" << "👀" << "👃" << "👅" << "💌" << "👤" << "👥" << "💬"
+           << "💭";
     
-    // Caras básicas - solo las más antiguas y estables
-    emojis << "😀" << "😃" << "😄" << "😁" << "😆" << "😊" << "😍" << "😘";
-    emojis << "😎" << "😛" << "😐" << "😒" << "😔" << "😢" << "😭" << "😠";
-    emojis << "😡" << "😳" << "😴" << "😷";
+    // Agregar emojis personalizados
+    emojis.append(customEmojis);
     
-    // Corazones básicos - sin variaciones modernas  
-    emojis << "❤" << "💛" << "💚" << "💙" << "💜" << "🖤" << "💔" << "💕";
-    emojis << "💖" << "💗";
-    
-    // Símbolos muy básicos
-    emojis << "⭐" << "✨" << "🌟" << "☀" << "🌙" << "✅" << "❌" << "⭕";
-    emojis << "❗" << "❓" << "💯";
-    
-    // Comida básica
-    emojis << "🍎" << "🍊" << "🍋" << "🍌" << "🍉" << "🍞" << "🍕" << "🍔";
-    emojis << "☕" << "🍺";
-    
-    // Transporte básico
-    emojis << "🚗" << "🚲" << "✈" << "🚀";
-    
-    // Deportes básicos
-    emojis << "⚽" << "🏀";
-    
-    // Números
-    emojis << "1⃣" << "2⃣" << "3⃣" << "4⃣" << "5⃣" << "6⃣" << "7⃣" << "8⃣" << "9⃣" << "0⃣";
-    
-    // Flechas básicas
-    emojis << "⬆" << "⬇" << "⬅" << "➡";
-    
-    // Celebración básica
-    emojis << "🎉" << "🎊" << "🎈" << "🎁" << "🎂";
-
     // Crear botones para cada emoji
     int row = 0, col = 0;
     for (const QString& emoji : emojis) {
@@ -789,9 +769,17 @@ void MarkdownEditor::insertEmoji() {
     
     // Botones de control
     QHBoxLayout* buttonLayout = new QHBoxLayout();
+    
+    QPushButton* manageButton = new QPushButton("Gestionar Emojis");
+    connect(manageButton, &QPushButton::clicked, [this, emojiDialog]() {
+        emojiDialog->accept();
+        manageCustomEmojis();
+    });
+    
     QPushButton* cancelButton = new QPushButton("Cancelar");
     connect(cancelButton, &QPushButton::clicked, emojiDialog, &QDialog::reject);
     
+    buttonLayout->addWidget(manageButton);
     buttonLayout->addStretch();
     buttonLayout->addWidget(cancelButton);
     
@@ -835,18 +823,61 @@ void MarkdownEditor::renderMarkdown() {
     // Verificar si hay tablas en el texto
     QRegularExpression tableRegex("\\|.*\\|");
     if (markdownText.contains(tableRegex)) {
-        // Si hay tablas, procesar todo como HTML personalizado
+        // Si hay tablas, procesar todo como HTML personalizado con soporte de emojis
         QString htmlContent = processMarkdownWithTables(markdownText);
-        doc->browser->setHtml(htmlContent);
+        
+        // Agregar CSS mejorado para emojis
+        QString htmlWithEmojiCSS = QString(
+            "<!DOCTYPE html>"
+            "<html><head>"
+            "<meta charset='UTF-8'>"
+            "<meta name='viewport' content='width=device-width, initial-scale=1.0'>"
+            "<style>"
+            "body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; padding: 20px; }"
+            ".emoji { font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'; font-size: 1.2em; }"
+            "table { border-collapse: collapse; width: 100%%; margin: 10px 0; }"
+            "th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }"
+            "th { background-color: #f2f2f2; font-weight: bold; }"
+            "</style>"
+            "</head><body>"
+            "%1"
+            "</body></html>"
+        ).arg(htmlContent);
+        
+        // Envolver emojis en spans con clase específica
+        QRegularExpression emojiRegex("([😀-🙏🌀-🗿🚀-🛿⚡-⚿✀-➿])");
+        htmlWithEmojiCSS.replace(emojiRegex, "<span class='emoji'>\\1</span>");
+        
+        doc->browser->setHtml(htmlWithEmojiCSS);
     } else {
-        // Si no hay tablas, usar cmark normal
+        // Si no hay tablas, usar cmark normal con mejoras para emojis
         QByteArray markdownByteArray = markdownText.toUtf8();
         int options = CMARK_OPT_HARDBREAKS;
         
         cmark_node *root = cmark_parse_document(markdownByteArray.constData(), markdownByteArray.size(), options);
         char *html = cmark_render_html(root, options);
         
-        doc->browser->setHtml(QString::fromUtf8(html));
+        // Crear HTML mejorado con soporte completo de emojis
+        QString htmlWithEmoji = QString(
+            "<!DOCTYPE html>"
+            "<html><head>"
+            "<meta charset='UTF-8'>"
+            "<meta name='viewport' content='width=device-width, initial-scale=1.0'>"
+            "<style>"
+            "body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; padding: 20px; }"
+            ".emoji { font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'; font-size: 1.2em; }"
+            "p, li, h1, h2, h3, h4, h5, h6 { font-family: inherit; }"
+            "</style>"
+            "</head><body>"
+            "%1"
+            "</body></html>"
+        ).arg(QString::fromUtf8(html));
+        
+        // Envolver emojis en spans con clase específica
+        QRegularExpression emojiRegex("([😀-🙏🌀-🗿🚀-🛿⚡-⚿✀-➿])");
+        htmlWithEmoji.replace(emojiRegex, "<span class='emoji'>\\1</span>");
+        
+        doc->browser->setHtml(htmlWithEmoji);
         
         free(html);
         cmark_node_free(root);
@@ -1420,6 +1451,7 @@ void MarkdownEditor::createTemplate() {
 TabDocument* MarkdownEditor::createNewDocument() {
     TabDocument* doc = new TabDocument();
     
+       
     // Crear los widgets
     doc->editor = new QTextEdit();
     doc->browser = new QTextBrowser();
@@ -1506,50 +1538,106 @@ void MarkdownEditor::newTab() {
     renderMarkdown();
 }
 
-void MarkdownEditor::openFileInNewTab() {
-    QString fileName = QFileDialog::getOpenFileName(this, 
-        "Abrir archivo", "", "Archivos de texto (*.md *.txt *.m3u *.cpp *.h *.js *.py *.html *.css *.xml *.json);;Archivos Markdown (*.md);;Todos los archivos (*)");
-    
-    if (!fileName.isEmpty()) {
-        // Crear nueva pestaña
-        TabDocument* doc = createNewDocument();
-        documents.append(doc);
-        
-        // Cargar archivo
-        QFile file(fileName);
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            QTextStream in(&file);
-            doc->editor->setPlainText(in.readAll());
-            
-            QFileInfo fileInfo(fileName);
-            doc->fileName = fileInfo.fileName();
-            doc->filePath = fileName;
-            doc->isNewFile = false;
-            doc->isModified = false;
-            
-            // Configurar el editor según el tipo de archivo
-            QString fileType = getFileType(fileName);
-            
-            // Si no es archivo Markdown, ocultar la vista previa
-            if (!shouldRenderPreview(fileName)) {
-                doc->browser->hide();
-                // Mostrar solo el editor
-                doc->splitter->setSizes({1, 0});
-            } else {
-                doc->browser->show();
-                doc->splitter->setSizes({1, 1});
-            }
-            
-            int index = tabWidget->addTab(doc->splitter, doc->fileName);
-            tabWidget->setCurrentIndex(index);
-            
-            // Actualizar título de ventana con indicador de tipo
-            QString windowTitle = "EscribeChanchi - " + doc->fileName;
-            if (fileType != "markdown" && fileType != "text") {
-                windowTitle += QString(" (%1)").arg(fileType.toUpper());
-            }
-            setWindowTitle(windowTitle);
+void MarkdownEditor::applyPreviewMode(TabDocument *doc) {
+    if (!doc || !doc->browser || !doc->splitter) {
+        return;
+    }
+
+    const bool preview = shouldRenderPreview(doc->filePath);
+    doc->browser->setVisible(preview);
+    doc->splitter->setStretchFactor(0, 1);
+    doc->splitter->setStretchFactor(1, preview ? 1 : 0);
+
+    const int total = qMax(doc->splitter->width(), 800);
+    if (preview) {
+        doc->splitter->setSizes({total / 2, total - total / 2});
+    } else {
+        doc->splitter->setSizes({total, 0});
+    }
+}
+
+bool MarkdownEditor::openFilePath(const QString &fileName) {
+    QFileInfo requested(fileName);
+    if (!requested.exists() || !requested.isFile()) {
+        QMessageBox::warning(this, "Error",
+            QString("No se pudo abrir el archivo:\n%1").arg(fileName));
+        return false;
+    }
+
+    QString absolute = requested.canonicalFilePath();
+    if (absolute.isEmpty()) {
+        absolute = requested.absoluteFilePath();
+    }
+
+    for (int i = 0; i < documents.size(); ++i) {
+        if (documents.at(i)->filePath == absolute) {
+            tabWidget->setCurrentIndex(i);
+            restoreFromTray();
+            return true;
         }
+    }
+
+    QFile file(absolute);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QMessageBox::warning(this, "Error",
+            QString("No se pudo abrir el archivo:\n%1").arg(absolute));
+        return false;
+    }
+
+    QTextStream in(&file);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    in.setEncoding(QStringConverter::Utf8);
+#else
+    in.setCodec("UTF-8");
+#endif
+    const QString content = in.readAll();
+    file.close();
+
+    TabDocument *doc = getCurrentDocument();
+    const bool reuseBlank = doc
+        && doc->isNewFile
+        && !doc->isModified
+        && doc->editor
+        && doc->editor->toPlainText().isEmpty();
+
+    if (!reuseBlank) {
+        doc = createNewDocument();
+        documents.append(doc);
+        const int index = tabWidget->addTab(doc->splitter, doc->fileName);
+        tabWidget->setCurrentIndex(index);
+    }
+
+    doc->editor->blockSignals(true);
+    doc->editor->setPlainText(content);
+    doc->editor->blockSignals(false);
+
+    doc->fileName = requested.fileName();
+    doc->filePath = absolute;
+    doc->isNewFile = false;
+    doc->isModified = false;
+
+    const int index = documents.indexOf(doc);
+    updateTabTitle(index);
+    applyPreviewMode(doc);
+
+    if (tabWidget->currentIndex() == index) {
+        tabChanged(index);
+    } else {
+        tabWidget->setCurrentIndex(index);
+    }
+
+    restoreFromTray();
+    statusBar()->showMessage("Archivo cargado", 2000);
+    return true;
+}
+
+void MarkdownEditor::openFileInNewTab() {
+    const QString fileName = QFileDialog::getOpenFileName(this,
+        "Abrir archivo", "",
+        "Archivos de texto (*.md *.txt *.m3u *.cpp *.h *.js *.py *.html *.css *.xml *.json);;Archivos Markdown (*.md);;Todos los archivos (*)");
+
+    if (!fileName.isEmpty()) {
+        openFilePath(fileName);
     }
 }
 
@@ -1791,13 +1879,13 @@ void MarkdownEditor::trayIconActivated(QSystemTrayIcon::ActivationReason reason)
 }
 
 void MarkdownEditor::exitApplication() {
-    // Forzar el cierre completo
+    forceQuit = true;
     QApplication::quit();
 }
 
 void MarkdownEditor::closeEvent(QCloseEvent *event) {
     // Si hay bandeja del sistema disponible, minimizar en lugar de cerrar
-    if (trayIcon && trayIcon->isVisible()) {
+    if (!forceQuit && trayIcon && trayIcon->isVisible()) {
         hideToTray();
         event->ignore();
         return;
@@ -2579,10 +2667,178 @@ void MarkdownEditor::replaceAll() {
     if (replaceCount > 0) {
         doc->isModified = true;
         updateTabTitle(documents.indexOf(doc));
-        statusBar()->showMessage(
-            QString("Se reemplazaron %1 ocurrencias de \"%2\" con \"%3\"")
-            .arg(replaceCount).arg(searchText).arg(replaceText), 4000);
-    } else {
-        statusBar()->showMessage(QString("No se encontraron ocurrencias de \"%1\"").arg(searchText), 3000);
     }
+    
+    QMessageBox::information(this, "Reemplazar Todo", 
+        QString("Se reemplazaron %1 ocurrencias.").arg(replaceCount));
+}
+
+// Implementaciones para emojis personalizados
+void MarkdownEditor::manageCustomEmojis() {
+    QDialog* manageDialog = new QDialog(this);
+    manageDialog->setWindowTitle("Gestionar Emojis Personalizados");
+    manageDialog->setFixedSize(500, 400);
+    manageDialog->setModal(true);
+    
+    QVBoxLayout* layout = new QVBoxLayout(manageDialog);
+    
+    QLabel* titleLabel = new QLabel("<h3>Emojis Personalizados</h3>");
+    layout->addWidget(titleLabel);
+    
+    // Lista de emojis personalizados
+    QListWidget* emojiList = new QListWidget();
+    for (const QString& emoji : customEmojis) {
+        emojiList->addItem(emoji);
+    }
+    layout->addWidget(emojiList);
+    
+    // Botones de gestión
+    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    
+    QPushButton* addButton = new QPushButton("Agregar");
+    connect(addButton, &QPushButton::clicked, [this, emojiList]() {
+        bool ok;
+        QString newEmoji = QInputDialog::getText(this, "Agregar Emoji", 
+            "Introduce el emoji o símbolo:", QLineEdit::Normal, "", &ok);
+        if (ok && !newEmoji.isEmpty()) {
+            customEmojis.append(newEmoji);
+            emojiList->addItem(newEmoji);
+            saveCustomEmojis();
+        }
+    });
+    
+    QPushButton* removeButton = new QPushButton("Eliminar");
+    connect(removeButton, &QPushButton::clicked, [this, emojiList]() {
+        int currentRow = emojiList->currentRow();
+        if (currentRow >= 0) {
+            customEmojis.removeAt(currentRow);
+            delete emojiList->takeItem(currentRow);
+            saveCustomEmojis();
+        }
+    });
+    
+    QPushButton* closeButton = new QPushButton("Cerrar");
+    connect(closeButton, &QPushButton::clicked, manageDialog, &QDialog::accept);
+    
+    buttonLayout->addWidget(addButton);
+    buttonLayout->addWidget(removeButton);
+    buttonLayout->addStretch();
+    buttonLayout->addWidget(closeButton);
+    
+    layout->addLayout(buttonLayout);
+    
+    manageDialog->exec();
+    delete manageDialog;
+}
+
+void MarkdownEditor::loadCustomEmojis() {
+    QFile file(getCustomEmojiPath());
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream stream(&file);
+        
+        customEmojis.clear();
+        while (!stream.atEnd()) {
+            QString line = stream.readLine().trimmed();
+            if (!line.isEmpty()) {
+                customEmojis.append(line);
+            }
+        }
+        file.close();
+    }
+}
+
+void MarkdownEditor::saveCustomEmojis() {
+    QFile file(getCustomEmojiPath());
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QTextStream stream(&file);
+        
+        for (const QString& emoji : customEmojis) {
+            stream << emoji << "\n";
+        }
+        file.close();
+    }
+}
+
+QString MarkdownEditor::getCustomEmojiPath() {
+    QString appDataPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir dir(appDataPath);
+    if (!dir.exists()) {
+        dir.mkpath(appDataPath);
+    }
+    return QDir(appDataPath).filePath("custom_emojis.txt");
+}
+
+// Implementaciones para sistema de instancia única
+void MarkdownEditor::setupSingleInstance() {
+    localServer = new QLocalServer(this);
+    connect(localServer, &QLocalServer::newConnection, this, &MarkdownEditor::handleNewConnection);
+
+    const QString serverName = QLatin1String(singleInstanceServerName());
+    if (!localServer->listen(serverName)) {
+        QLocalServer::removeServer(serverName);
+        if (!localServer->listen(serverName)) {
+            qDebug() << "No se pudo crear el servidor local:" << localServer->errorString();
+        }
+    }
+}
+
+void MarkdownEditor::handleNewConnection() {
+    while (QLocalSocket *socket = localServer->nextPendingConnection()) {
+        auto *buffer = new QByteArray;
+        connect(socket, &QLocalSocket::readyRead, this, [this, socket, buffer]() {
+            buffer->append(socket->readAll());
+            ingestInstanceData(buffer);
+        });
+        connect(socket, &QLocalSocket::disconnected, this, [this, socket, buffer]() {
+            buffer->append(socket->readAll());
+            ingestInstanceData(buffer);
+            delete buffer;
+            socket->deleteLater();
+        });
+    }
+}
+
+void MarkdownEditor::ingestInstanceData(QByteArray *buffer) {
+    if (!buffer || buffer->isEmpty()) {
+        return;
+    }
+
+    int consumed = 0;
+    {
+        QBuffer device(buffer);
+        device.open(QIODevice::ReadOnly);
+        QDataStream in(&device);
+        in.setVersion(QDataStream::Qt_5_15);
+
+        while (!device.atEnd()) {
+            in.startTransaction();
+            QString command;
+            QString argument;
+            in >> command >> argument;
+            if (!in.commitTransaction()) {
+                break;
+            }
+            consumed = static_cast<int>(device.pos());
+            if (command == QLatin1String("OPEN")) {
+                openFilePath(argument);
+            } else if (command == QLatin1String("SHOW")) {
+                restoreFromTray();
+            }
+        }
+    }
+
+    if (consumed > 0) {
+        buffer->remove(0, consumed);
+    }
+}
+
+void MarkdownEditor::restoreFromTray() {
+    if (isHidden()) {
+        show();
+    }
+    if (isMinimized()) {
+        showNormal();
+    }
+    raise();
+    activateWindow();
 }
