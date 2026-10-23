@@ -4,7 +4,7 @@
 
 Este es un editor de Markdown desarrollado en C++ con Qt, que incluye sistema de pestañas, plantillas, barra de herramientas mejorada, búsqueda avanzada y sistema optimizado de emojis. Y todas aquellas otras cosas que me sean útiles en algún u otro momento.
 
-![GitHub](https://img.shields.io/badge/version-v1.6-blue) ![C++](https://img.shields.io/badge/language-C%2B%2B-blue) ![Qt](https://img.shields.io/badge/framework-Qt5%2FQt6-green) ![License](https://img.shields.io/badge/license-MIT-green)
+![GitHub](https://img.shields.io/badge/version-v1.6-blue) ![C++](https://img.shields.io/badge/language-C%2B%2B-blue) ![Qt](https://img.shields.io/badge/framework-Qt6-green) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## 🎯 TL;DR (Resumen Ultra-Rápido)
 ```bash
@@ -74,7 +74,7 @@ sudo pacman -S base-devel qt5-base qt5-webkit cmark cmake git
 ### 📦 Instalar usando el paquete .DEB (RECOMENDADO)
 ![lanzador-escribe-chanchi](https://github.com/user-attachments/assets/64d584a3-894b-495a-89cf-af69ec02ed16)
 
-**¡IMPORTANTE!** Para evitar problemas con la desinstalación que podrían afectar iconos de otras aplicaciones, asegúrate de usar la **versión corregida v1.6-2**.
+**¡IMPORTANTE!** Usa el paquete **v1.6-2**. Necesita Qt 6 y libcmark. Si faltan librerías, `apt-get install -f` las instala. El paquete ya no depende de Qt WebEngine.
 
 La opción más sencilla para probar este programa será usar el paquete .deb que he dejando en la [página de lanzamientos de este repositorio](https://github.com/sapoclay/escribe-chanchi/releases/tag/1.6_Versi%C3%B3n)
 
@@ -92,11 +92,11 @@ sudo dpkg -r escribe-chanchi
 sudo dpkg -i escribe-chanchi_1.6-2_amd64.deb
 ```
 
-**🔒 Mejoras de Seguridad v1.6-2:**
-- ✅ Scripts de desinstalación corregidos para no afectar iconos de otras aplicaciones
-- ✅ Terminación segura de procesos durante la desinstalación
-- ✅ Limpieza selectiva solo de archivos propios
-- ✅ Soporte mejorado para purge completo de configuración
+**Novedades de la v1.6-2:**
+- Abrir un documento carga el texto en la ventana que ya está en marcha
+- **Archivo → Salir** cierra el programa. La X lo minimiza a la bandeja
+- Archivos recientes, ir a una línea y tamaño de fuente ajustable
+- Scripts de desinstalación que no afectan iconos de otras aplicaciones
 
 ## 💡 Cómo Usar el Editor
 
@@ -124,8 +124,9 @@ sudo dpkg -i escribe-chanchi_1.6-2_amd64.deb
 - **Elegir emoji**: Clic en el emoji deseado
 - **Se inserta automáticamente** en el texto
 
-### � Cambiar Tema
-- **Modo oscuro/claro**: Clic en 🌙 o `F11`
+### Cambiar Tema
+- **Modo oscuro/claro**: Clic en Oscuro o `Ctrl+Shift+D`
+- **Pantalla completa**: `F11`
 
 ## 🎯 Características Principales
 
@@ -136,7 +137,7 @@ sudo dpkg -i escribe-chanchi_1.6-2_amd64.deb
 - ✅ **Barra de herramientas renovada** - Iconos descriptivos dibujados con QPainter
 - ✅ **200+ emojis compatibles + personalizados** - Sistema extensible con persistencia
 - ✅ **Plantillas predefinidas** - Para blogs, documentos técnicos, README
-- ✅ **Modo claro/oscuro** - Alternancia con F11
+- ✅ **Modo claro/oscuro** - Alternancia con Ctrl+Shift+D
 - ✅ **Vista previa en tiempo real** - Para archivos Markdown con soporte de tablas
 - ✅ **Exportación múltiple** - A HTML y PDF
 - ✅ **Bandeja del sistema** - Minimizado inteligente
@@ -158,7 +159,7 @@ sudo dpkg -i escribe-chanchi_1.6-2_amd64.deb
 - **Barra de herramientas completa** con iconos gráficos descriptivos
 - **Diálogos no modales** para búsqueda que permiten editar mientras se busca
 - **Vista previa HTML** con CSS optimizado para emojis y tablas
-- **Modo pantalla completa** disponible (F10)
+- **Modo pantalla completa** disponible (F11)
 - **Ventana maximizada** por defecto para mejor experiencia
 - **Bandeja del sistema** con menú contextual
 
@@ -172,22 +173,24 @@ sudo dpkg -i escribe-chanchi_1.6-2_amd64.deb
 | Guardar | `Ctrl+S` | Guardar documento actual |
 | Guardar como | `Ctrl+Shift+S` | Guardar con nuevo nombre |
 | Cerrar pestaña | `Ctrl+W` | Cerrar pestaña actual |
+| Salir | `Ctrl+Q` | Cerrar el programa |
 | **🔍 Búsqueda** | | |
 | Buscar | `Ctrl+F` | Abrir diálogo de búsqueda |
 | Buscar y reemplazar | `Ctrl+H` | Abrir diálogo de reemplazo |
 | Buscar siguiente | `F3` | Ir al siguiente resultado |
 | Buscar anterior | `Shift+F3` | Ir al resultado anterior |
+| Ir a la línea | `Ctrl+G` | Mover el cursor a un número de línea |
 | **✍️ Formato** | | |
 | Negrita | `Ctrl+B` | Texto en **negrita** |
 | Cursiva | `Ctrl+I` | Texto en *cursiva* |
 | Código | `Ctrl+`` | Texto en `código` |
 | Tachado | `Ctrl+Shift+X` | Texto ~~tachado~~ |
 | Encabezado | `Ctrl+1` | # Encabezado |
-| Cita | `Ctrl+Q` | > Cita |
-| Bloque de código | `Ctrl+Shift+C` | ```código``` |
+| Cita | `Ctrl+Shift+Q` | > Cita |
+| Bloque de código | Ctrl+Shift+` | Insertar un bloque de código |
 | **📝 Listas y Estructura** | | |
 | Lista sin ordenar | `Ctrl+U` | • Lista |
-| Lista numerada | `Ctrl+Shift+U` | 1. Lista |
+| Lista numerada | `Ctrl+Shift+O` | 1. Lista |
 | Enlace | `Ctrl+L` | [texto](enlace) |
 | Imagen | `Ctrl+Shift+I` | ![alt](imagen) |
 | Tabla | `Ctrl+T` | Insertar tabla |
@@ -197,8 +200,12 @@ sudo dpkg -i escribe-chanchi_1.6-2_amd64.deb
 | Plantilla | `Ctrl+Shift+T` | Usar plantilla |
 | Nueva plantilla | `Ctrl+Shift+N` | Crear plantilla |
 | **🖥️ Vista** | | |
-| Modo oscuro | `F11` | Alternar tema claro/oscuro |
-| Pantalla completa | `F10` | Ocultar barras de ventana |
+| Modo oscuro | `Ctrl+Shift+D` | Alternar tema claro/oscuro |
+| Pantalla completa | `F11` | Alternar pantalla completa |
+| Vista previa | `Ctrl+Shift+P` | Mostrar u ocultar el artículo interpretado |
+| Aumentar fuente | `Ctrl++` | Sube el tamaño del texto |
+| Reducir fuente | `Ctrl+-` | Baja el tamaño del texto |
+| Tamaño normal | `Ctrl+0` | Vuelve a 12 puntos |
 | Números de línea | `Ctrl+Shift+L` | Mostrar/ocultar numeración |
 
 ## 🔧 Compilación Avanzada
@@ -357,6 +364,10 @@ Acceso: `Ctrl+E` o botón :) en la barra de herramientas
 ## 📝 Notas de Desarrollo
 
 ### Versión Actual (v1.6-2)
+- ✅ **Apertura de documentos** en la instancia que ya está en ejecución, sin ventana vacía
+- ✅ **Salir** cierra el programa. La X lo deja en la bandeja
+- ✅ **Archivos recientes**, **ir a la línea** (`Ctrl+G`) y **tamaño de fuente** (`Ctrl++`, `Ctrl+-`, `Ctrl+0`)
+- ✅ **Vista previa** del artículo al lado del Markdown, que se puede ocultar con `Ctrl+Shift+P`
 - ✅ **CORRECCIÓN CRÍTICA:** Scripts de desinstalación seguros que no afectan iconos de otras aplicaciones
 - ✅ **Sistema de instancia única** - Evita múltiples procesos usando QSharedMemory y QLocalServer
 - ✅ **200+ emojis compatibles** con sistema de emojis personalizados y persistencia
@@ -375,9 +386,9 @@ Acceso: `Ctrl+E` o botón :) en la barra de herramientas
 - ✅ **Documentación reorganizada** y simplificada
 
 ### Arquitectura Técnica
-- **Lenguaje:** C++17 con librerías Qt5/Qt6
+- **Lenguaje:** C++17 con Qt 6
 - **Build System:** CMake (recomendado) + Makefile tradicional
-- **Dependencias:** Qt, libcmark, build-essential
+- **Dependencias:** Qt 6 (Core, Gui, Widgets, Network, PrintSupport) y libcmark
 - **Patrón:** Aplicación de escritorio Qt con arquitectura MVC
 
 ## 🤝 Contribuciones

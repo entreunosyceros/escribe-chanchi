@@ -105,6 +105,12 @@ private slots:
     void showReplaceDialog();
     void findNext();
     void findPrevious();
+    void goToLine();
+    void increaseFontSize();
+    void decreaseFontSize();
+    void resetFontSize();
+    void openRecentFile();
+    void togglePreview(bool enabled);
     void replaceNext();
     void replaceAll();
     void manageCustomEmojis();  // Gestionar emojis personalizados
@@ -150,6 +156,12 @@ private:
     TemplateManager *templateManager;
     bool darkMode;
     bool showLineNumbers;
+    bool previewEnabled = true;
+    QAction *previewAction = nullptr;
+    int editorFontPointSize = 12;
+    QStringList recentFiles;
+    QMenu *recentFilesMenu = nullptr;
+    static const int MaxRecentFiles = 10;
     int untitledCounter;       // Contador para archivos sin título
 
     // Backward compatibility (se eliminarán)
@@ -183,6 +195,12 @@ private:
     void ingestInstanceData(QByteArray *buffer);
     void restoreFromTray();
     void applyPreviewMode(TabDocument *doc);
+    void loadEditorPreferences();
+    void setEditorFontSize(int pointSize);
+    QString editorStyleSheet(bool dark) const;
+    void addToRecentFiles(const QString &path);
+    void saveRecentFiles();
+    void updateRecentFilesMenu();
 
     // Funciones helper declaradas en .cpp
     QString getFileType(const QString &filePath);

@@ -31,6 +31,7 @@
 #include <QDataStream>
 #include <QBuffer>
 #include <QStatusBar>
+#include <QSettings>
 
 MarkdownEditor::MarkdownEditor(QWidget *parent) 
     : QMainWindow(parent), darkMode(false), showLineNumbers(false), untitledCounter(1),
@@ -60,6 +61,8 @@ MarkdownEditor::MarkdownEditor(QWidget *parent)
 
     // Inicializar template manager
     templateManager = new TemplateManager(this);
+
+    loadEditorPreferences();
 
     // Configurar la barra de menús
     setupMenuBar();
@@ -106,6 +109,9 @@ void MarkdownEditor::setupMenuBar() {
     openAction->setShortcut(QKeySequence::Open);
     connect(openAction, &QAction::triggered, this, &MarkdownEditor::openFileInNewTab);
     fileMenu->addAction(openAction);
+
+    recentFilesMenu = fileMenu->addMenu("Archivos recientes");
+    updateRecentFilesMenu();
     
     fileMenu->addSeparator();
     
@@ -159,14 +165,21 @@ void MarkdownEditor::setupMenuBar() {
     editMenu->addSeparator();
     
     QAction* findNextAction = new QAction("Buscar &siguiente", this);
-    findNextAction->setShortcut(QKeySequence::FindNext);
+    findNextAction->setShortcut(QKeySequence(Qt::Key_F3));
     connect(findNextAction, &QAction::triggered, this, &MarkdownEditor::findNext);
     editMenu->addAction(findNextAction);
     
     QAction* findPreviousAction = new QAction("Buscar &anterior", this);
-    findPreviousAction->setShortcut(QKeySequence::FindPrevious);
+    findPreviousAction->setShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F3));
     connect(findPreviousAction, &QAction::triggered, this, &MarkdownEditor::findPrevious);
     editMenu->addAction(findPreviousAction);
+
+    editMenu->addSeparator();
+
+    QAction* goToLineAction = new QAction("Ir a la &línea...", this);
+    goToLineAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_G));
+    connect(goToLineAction, &QAction::triggered, this, &MarkdownEditor::goToLine);
+    editMenu->addAction(goToLineAction);
 
     // Menú Formato
     QMenu* formatMenu = this->menuBar()->addMenu("Formato");
@@ -292,6 +305,30 @@ void MarkdownEditor::setupMenuBar() {
     toggleFullScreenMenuAction->setShortcut(QKeySequence("F11"));
     connect(toggleFullScreenMenuAction, &QAction::triggered, this, &MarkdownEditor::toggleFullScreen);
     viewMenu->addAction(toggleFullScreenMenuAction);
+
+    previewAction = new QAction("Vista previa", this);
+    previewAction->setCheckable(true);
+    previewAction->setChecked(previewEnabled);
+    previewAction->setShortcut(QKeySequence("Ctrl+Shift+P"));
+    connect(previewAction, &QAction::toggled, this, &MarkdownEditor::togglePreview);
+    viewMenu->addAction(previewAction);
+
+    viewMenu->addSeparator();
+
+    QAction* increaseFontAction = new QAction("Aumentar tamaño de fuente", this);
+    increaseFontAction->setShortcut(QKeySequence::ZoomIn);
+    connect(increaseFontAction, &QAction::triggered, this, &MarkdownEditor::increaseFontSize);
+    viewMenu->addAction(increaseFontAction);
+
+    QAction* decreaseFontAction = new QAction("Reducir tamaño de fuente", this);
+    decreaseFontAction->setShortcut(QKeySequence::ZoomOut);
+    connect(decreaseFontAction, &QAction::triggered, this, &MarkdownEditor::decreaseFontSize);
+    viewMenu->addAction(decreaseFontAction);
+
+    QAction* resetFontAction = new QAction("Tamaño de fuente normal", this);
+    resetFontAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_0));
+    connect(resetFontAction, &QAction::triggered, this, &MarkdownEditor::resetFontSize);
+    viewMenu->addAction(resetFontAction);
 
     // Menú Ayuda
     QMenu* helpMenu = this->menuBar()->addMenu("Ayuda");
@@ -543,7 +580,13 @@ void MarkdownEditor::setupToolBar() {
     
     mainToolBar->addSeparator();
     
-    // Sección de vista
+    // Sección de vista. La misma acción del menú, para no duplicar el atajo.
+    if (previewAction) {
+        previewAction->setIcon(createTextIcon("Md", QFont("Arial", 9, QFont::Bold), QColor(40, 90, 160)));
+        previewAction->setToolTip("Mostrar u ocultar la vista previa (Ctrl+Shift+P)");
+        mainToolBar->addAction(previewAction);
+    }
+
     QAction* darkModeAction = mainToolBar->addAction(createGraphicIcon("dark", QColor(80, 80, 150)), "Oscuro");
     darkModeAction->setToolTip("Alternar modo oscuro (Ctrl+Shift+D)");
     connect(darkModeAction, &QAction::triggered, this, &MarkdownEditor::toggleDarkMode);
@@ -796,8 +839,7 @@ void MarkdownEditor::renderMarkdown() {
         return;
     }
     
-    // Solo renderizar si es un archivo que debe mostrar vista previa
-    if (!shouldRenderPreview(doc->filePath)) {
+    if (!previewEnabled || !shouldRenderPreview(doc->filePath)) {
         // Si no es un archivo de vista previa, limpiar el browser
         doc->browser->clear();
         return;
@@ -1154,15 +1196,7 @@ void MarkdownEditor::toggleLineNumbers() {
     
     if (showLineNumbers) {
         // Crear un estilo más visible para los números de línea
-        QString lineNumberStyle = QString(
-            "QTextEdit { "
-            "   border-left: 40px solid %1; "
-            "   padding-left: 10px; "
-            "   background-color: %2; "
-            "} "
-        ).arg(darkMode ? "#3c3c3c" : "#f0f0f0", darkMode ? "#2b2b2b" : "#ffffff");
-        
-        doc->editor->setStyleSheet(lineNumberStyle);
+        doc->editor->setStyleSheet(editorStyleSheet(darkMode));
         
         // Añadir números visualmente en el contenido
         QString content = doc->editor->toPlainText();
@@ -1180,9 +1214,7 @@ void MarkdownEditor::toggleLineNumbers() {
         }
     } else {
         // Remover números de línea
-        doc->editor->setStyleSheet(darkMode ? 
-            "background-color: #2b2b2b; color: white;" : 
-            "background-color: white; color: black;");
+        doc->editor->setStyleSheet(editorStyleSheet(darkMode));
         
         // Remover números del contenido
         QString content = doc->editor->toPlainText();
@@ -1534,7 +1566,7 @@ void MarkdownEditor::newTab() {
         setLightMode();
     }
     
-    // Renderizar vista previa inicial para archivos nuevos
+    applyPreviewMode(doc);
     renderMarkdown();
 }
 
@@ -1543,7 +1575,7 @@ void MarkdownEditor::applyPreviewMode(TabDocument *doc) {
         return;
     }
 
-    const bool preview = shouldRenderPreview(doc->filePath);
+    const bool preview = previewEnabled && shouldRenderPreview(doc->filePath);
     doc->browser->setVisible(preview);
     doc->splitter->setStretchFactor(0, 1);
     doc->splitter->setStretchFactor(1, preview ? 1 : 0);
@@ -1573,6 +1605,7 @@ bool MarkdownEditor::openFilePath(const QString &fileName) {
         if (documents.at(i)->filePath == absolute) {
             tabWidget->setCurrentIndex(i);
             restoreFromTray();
+            addToRecentFiles(absolute);
             return true;
         }
     }
@@ -1627,6 +1660,7 @@ bool MarkdownEditor::openFilePath(const QString &fileName) {
     }
 
     restoreFromTray();
+    addToRecentFiles(absolute);
     statusBar()->showMessage("Archivo cargado", 2000);
     return true;
 }
@@ -2010,15 +2044,7 @@ void MarkdownEditor::setDarkMode() {
             darkPalette.setColor(QPalette::WindowText, QColor(255, 255, 255));
             
             doc->editor->setPalette(darkPalette);
-            doc->editor->setStyleSheet(
-                "QTextEdit {"
-                "   background-color: #1e1e1e;"
-                "   color: #ffffff;"
-                "   border: 1px solid #555;"
-                "   font-family: 'Courier New', monospace;"
-                "   font-size: 12pt;"
-                "}"
-            );
+            doc->editor->setStyleSheet(editorStyleSheet(true));
         }
     }
     
@@ -2117,21 +2143,172 @@ void MarkdownEditor::setLightMode() {
             lightPalette.setColor(QPalette::WindowText, QColor(0, 0, 0));
             
             doc->editor->setPalette(lightPalette);
-            doc->editor->setStyleSheet(
-                "QTextEdit {"
-                "   background-color: #ffffff;"
-                "   color: #000000;"
-                "   border: 1px solid #ccc;"
-                "   font-family: 'Courier New', monospace;"
-                "   font-size: 12pt;"
-                "}"
-            );
+            doc->editor->setStyleSheet(editorStyleSheet(false));
         }
     }
     
     // Restaurar tema claro por defecto
     setPalette(QApplication::palette());
     setStyleSheet("");
+}
+
+QString MarkdownEditor::editorStyleSheet(bool dark) const {
+    QString extra;
+    if (showLineNumbers) {
+        extra = QString("border-left: 40px solid %1; padding-left: 10px;")
+                    .arg(dark ? "#3c3c3c" : "#f0f0f0");
+    }
+
+    return QString(
+        "QTextEdit {"
+        "   background-color: %1;"
+        "   color: %2;"
+        "   border: 1px solid %3;"
+        "   font-family: 'Courier New', monospace;"
+        "   font-size: %4pt;"
+        "   %5"
+        "}"
+    ).arg(dark ? "#1e1e1e" : "#ffffff",
+          dark ? "#ffffff" : "#000000",
+          dark ? "#555" : "#ccc",
+          QString::number(editorFontPointSize),
+          extra);
+}
+
+void MarkdownEditor::togglePreview(bool enabled) {
+    previewEnabled = enabled;
+    QSettings settings;
+    settings.setValue("previewEnabled", previewEnabled);
+    for (TabDocument *doc : documents) {
+        applyPreviewMode(doc);
+    }
+    renderMarkdown();
+}
+
+void MarkdownEditor::loadEditorPreferences() {
+    QSettings settings;
+    previewEnabled = settings.value("previewEnabled", true).toBool();
+    editorFontPointSize = qBound(8, settings.value("editorFontPointSize", 12).toInt(), 32);
+    recentFiles = settings.value("recentFiles").toStringList();
+
+    QStringList existing;
+    for (const QString &path : recentFiles) {
+        if (QFileInfo::exists(path) && existing.size() < MaxRecentFiles) {
+            existing.append(path);
+        }
+    }
+    if (recentFiles != existing) {
+        recentFiles = existing;
+        saveRecentFiles();
+    }
+}
+
+void MarkdownEditor::setEditorFontSize(int pointSize) {
+    editorFontPointSize = qBound(8, pointSize, 32);
+    if (darkMode) {
+        setDarkMode();
+    } else {
+        setLightMode();
+    }
+    QSettings settings;
+    settings.setValue("editorFontPointSize", editorFontPointSize);
+}
+
+void MarkdownEditor::increaseFontSize() {
+    setEditorFontSize(editorFontPointSize + 1);
+}
+
+void MarkdownEditor::decreaseFontSize() {
+    setEditorFontSize(editorFontPointSize - 1);
+}
+
+void MarkdownEditor::resetFontSize() {
+    setEditorFontSize(12);
+}
+
+void MarkdownEditor::goToLine() {
+    TabDocument *doc = getCurrentDocument();
+    if (!doc || !doc->editor) {
+        return;
+    }
+
+    const int total = qMax(1, doc->editor->document()->blockCount());
+    const int current = doc->editor->textCursor().blockNumber() + 1;
+    bool ok = false;
+    const int line = QInputDialog::getInt(this, "Ir a la línea",
+        "Número de línea:", current, 1, total, 1, &ok);
+    if (!ok) {
+        return;
+    }
+
+    QTextCursor cursor(doc->editor->document()->findBlockByNumber(line - 1));
+    doc->editor->setTextCursor(cursor);
+    doc->editor->ensureCursorVisible();
+    doc->editor->setFocus();
+}
+
+void MarkdownEditor::addToRecentFiles(const QString &path) {
+    if (path.isEmpty()) {
+        return;
+    }
+    recentFiles.removeAll(path);
+    recentFiles.prepend(path);
+    while (recentFiles.size() > MaxRecentFiles) {
+        recentFiles.removeLast();
+    }
+    saveRecentFiles();
+    updateRecentFilesMenu();
+}
+
+void MarkdownEditor::saveRecentFiles() {
+    QSettings settings;
+    settings.setValue("recentFiles", recentFiles);
+}
+
+void MarkdownEditor::updateRecentFilesMenu() {
+    if (!recentFilesMenu) {
+        return;
+    }
+    recentFilesMenu->clear();
+    if (recentFiles.isEmpty()) {
+        QAction *emptyAction = recentFilesMenu->addAction("(vacío)");
+        emptyAction->setEnabled(false);
+        return;
+    }
+
+    for (const QString &path : recentFiles) {
+        QAction *action = recentFilesMenu->addAction(QFileInfo(path).fileName());
+        action->setToolTip(path);
+        action->setData(path);
+        connect(action, &QAction::triggered, this, &MarkdownEditor::openRecentFile);
+    }
+
+    recentFilesMenu->addSeparator();
+    QAction *clearAction = recentFilesMenu->addAction("Limpiar lista");
+    connect(clearAction, &QAction::triggered, this, [this]() {
+        recentFiles.clear();
+        saveRecentFiles();
+        updateRecentFilesMenu();
+    });
+}
+
+void MarkdownEditor::openRecentFile() {
+    QAction *action = qobject_cast<QAction *>(sender());
+    if (!action) {
+        return;
+    }
+
+    const QString path = action->data().toString();
+    if (!QFileInfo::exists(path)) {
+        QMessageBox::warning(this, "Archivo no encontrado",
+            QString("El archivo ya no existe:\n%1").arg(path));
+        recentFiles.removeAll(path);
+        saveRecentFiles();
+        updateRecentFilesMenu();
+        return;
+    }
+
+    openFilePath(path);
 }
 
 // ===== IMPLEMENTACIÓN DE FUNCIONES DE BÚSQUEDA Y REEMPLAZO =====
