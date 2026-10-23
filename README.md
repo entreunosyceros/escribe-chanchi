@@ -1,6 +1,9 @@
 # Escribe Chanchi - Editor de Markdown
+<p align="center">
 
-![about-escribe-chanchi](https://github.com/user-attachments/assets/a400a351-5648-4979-a9ec-cd4f07d37565)
+<img width="640" height="640" alt="logo" src="https://github.com/user-attachments/assets/17d20f6c-d8b8-4276-85cf-d978dafaaaed" />
+
+</p>
 
 Este es un editor de Markdown desarrollado en C++ con Qt, que incluye sistema de pestañas, plantillas, barra de herramientas mejorada, búsqueda avanzada y sistema optimizado de emojis. Y todas aquellas otras cosas que me sean útiles en algún u otro momento.
 
@@ -26,6 +29,8 @@ sudo apt install build-essential qt5-default libqt5webkit5-dev libcmark-dev cmak
 ```
 
 ## Instalación y Uso
+
+![about-escribe-chanchi](https://github.com/user-attachments/assets/a400a351-5648-4979-a9ec-cd4f07d37565)
 
 ### Paso 1: Clonar el Repositorio
 ```bash
