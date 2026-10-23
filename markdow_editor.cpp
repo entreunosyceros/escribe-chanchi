@@ -994,69 +994,136 @@ void MarkdownEditor::loadFromFile() {
 void MarkdownEditor::showManual() {
     QDialog* manualDialog = new QDialog(this);
     manualDialog->setWindowTitle("Manual de Markdown");
-    manualDialog->setMinimumSize(600, 500);
+    manualDialog->resize(720, 640);
+    manualDialog->setMinimumSize(600, 480);
     
     QVBoxLayout* layout = new QVBoxLayout(manualDialog);
     
     QScrollArea* scrollArea = new QScrollArea(manualDialog);
     QLabel* manualLabel = new QLabel();
     
-    QString manualText = "<h1>Manual de Markdown</h1>"
-                        "<h2>Encabezados</h2>"
-                        "<p><strong># Encabezado 1</strong><br>"
-                        "<strong>## Encabezado 2</strong><br>"
-                        "<strong>### Encabezado 3</strong></p>"
-                        
-                        "<h2>Formato de Texto</h2>"
-                        "<p><strong>**Texto en negrita**</strong><br>"
-                        "<em>*Texto en cursiva*</em><br>"
-                        "<code>`Código en línea`</code></p>"
-                        
-                        "<h2>Listas</h2>"
-                        "<p><strong>Lista con viñetas:</strong><br>"
-                        "- Elemento 1<br>"
-                        "- Elemento 2<br>"
-                        "- Elemento 3</p>"
-                        
-                        "<p><strong>Lista numerada:</strong><br>"
-                        "1. Primer elemento<br>"
-                        "2. Segundo elemento<br>"
-                        "3. Tercer elemento</p>"
-                        
-                        "<h2>Enlaces</h2>"
-                        "<p><strong>[Texto del enlace](https://ejemplo.com)</strong></p>"
-                        
-                        "<h2>Imágenes</h2>"
-                        "<p><strong>![Texto alternativo](ruta/imagen.jpg)</strong></p>"
-                        
-                        "<h2>Código</h2>"
-                        "<p><strong>Bloque de código:</strong><br>"
-                        "```<br>"
-                        "código aquí<br>"
-                        "```</p>"
-                        
-                        "<h2>Citas</h2>"
-                        "<p><strong>&gt; Esto es una cita</strong></p>"
-                        
-                        "<h2>Líneas Horizontales</h2>"
-                        "<p><strong>---</strong> o <strong>***</strong></p>"
-                        "<p>Ejemplo de tabla:</p>"
-                        "<pre><code>| Columna 1 | Columna 2 |\n"
-                        "|-----------|-----------|\n"
-                        "| Dato 1    | Dato 2    |\n"
-                        "| Dato 3    | Dato 4    |</code></pre>";
+    const QString manualText = QStringLiteral(R"manual(
+<h1>Manual de Markdown</h1>
+<p>Escribe el artículo en el panel de la izquierda. A la derecha ves el mismo texto ya interpretado.
+<b>Ctrl+Shift+P</b> muestra u oculta esa vista. Los botones de la barra y el menú Formato insertan estos signos por ti:
+selecciona un trozo y pulsa el atajo, o déjalo vacío para colocar los signos y escribir dentro.</p>
+
+<h2>Párrafos y saltos de línea</h2>
+<p>Pulsa Intro para partir la línea. Deja una línea en blanco para empezar otro párrafo.</p>
+<p>Escribes:</p>
+<pre>Primera línea
+sigue debajo.
+
+Esto ya es otro párrafo.</pre>
+<p>Se ve: la primera frase y la segunda van juntas, con un salto; la tercera queda en un párrafo aparte.</p>
+
+<h2>Encabezados</h2>
+<p>De uno a seis signos <code>#</code>, un espacio y el título. <b>Ctrl+1</b> inserta un encabezado de nivel 1 al principio de la línea.</p>
+<pre># Título del artículo
+## Un apartado
+### Un subapartado
+###### El más pequeño</pre>
+<p>Se ve: títulos de mayor a menor tamaño, del nivel 1 al 6.</p>
+
+<h2>Negrita, cursiva y tachado</h2>
+<p><b>Ctrl+B</b> rodea el texto con dos asteriscos. <b>Ctrl+I</b> usa uno. Tres asteriscos juntan las dos cosas.
+<b>Ctrl+Shift+X</b> lo tacha con dos virgulillas.</p>
+<pre>**negrita**
+*cursiva*
+***negrita y cursiva***
+~~tachado~~</pre>
+<p>Se ve: <strong>negrita</strong>, <em>cursiva</em>, <strong><em>negrita y cursiva</em></strong> y <del>tachado</del>.</p>
+
+<h2>Código en una línea</h2>
+<p><b>Ctrl+`</b> rodea una palabra o una orden con comillas invertidas, para que no se interprete como formato.</p>
+<pre>El atajo es `Ctrl+S`.</pre>
+<p>Se ve: El atajo es <code>Ctrl+S</code>.</p>
+
+<h2>Listas</h2>
+<p><b>Ctrl+U</b> empieza una viñeta con <code>- </code>. <b>Ctrl+Shift+O</b> empieza una lista numerada con <code>1. </code>.
+Para meter una lista dentro de otra, sangra la línea con dos espacios.</p>
+<pre>- Fruta
+  - Manzana
+  - Pera
+- Verdura
+
+1. Abrir el archivo
+2. Escribir
+3. Guardar</pre>
+<p>Se ve: una lista con dos elementos dentro del primero, y otra con los pasos 1, 2 y 3.</p>
+
+<h2>Enlaces</h2>
+<p><b>Ctrl+L</b> inserta el texto visible entre corchetes y la dirección entre paréntesis.</p>
+<pre>[Página del proyecto](https://ejemplo.com)</pre>
+<p>Se ve: un enlace con el texto «Página del proyecto» que apunta a esa dirección.</p>
+
+<h2>Imágenes</h2>
+<p><b>Ctrl+Shift+I</b> es igual que un enlace, con un signo de cierre de admiración delante.
+El texto entre corchetes se muestra si la imagen no carga.</p>
+<pre>![Logotipo](img/logo.png)</pre>
+<p>Se ve: la imagen de esa ruta, o el texto «Logotipo» si no se encuentra.</p>
+
+<h2>Bloque de código</h2>
+<p><b>Ctrl+Shift+`</b> abre y cierra un bloque con tres comillas invertidas, cada una en su línea.
+Si en la primera línea escribes el lenguaje, el bloque queda marcado como ese código.</p>
+<pre>```cpp
+int suma = 1 + 2;
+```</pre>
+<p>Se ve: esas dos líneas con letra de código, sin interpretar los signos que haya dentro.</p>
+
+<h2>Citas</h2>
+<p><b>Ctrl+Shift+Q</b> pone <code>&gt; </code> al principio de la línea. Repite el signo en cada línea de la cita.</p>
+<pre>&gt; Una frase citada.
+&gt; Sigue en la línea siguiente.</pre>
+<p>Se ve: las dos frases en un bloque de cita.</p>
+
+<h2>Línea horizontal</h2>
+<p><b>Ctrl+Shift+H</b> inserta tres guiones en una línea sola. También valen tres asteriscos.</p>
+<pre>---</pre>
+<p>Se ve: una raya que separa dos partes del artículo.</p>
+
+<h2>Tablas</h2>
+<p>La primera fila son los títulos. La segunda solo tiene guiones, uno por columna, y marca esa fila como cabecera.
+Las demás son los datos. Cada celda va entre barras verticales. <b>Ctrl+T</b> pregunta las filas y las columnas y escribe este esquema.</p>
+<pre>| Nombre | Precio |
+|--------|--------|
+| Pan    | 1 €    |
+| Leche  | 2 €    |</pre>
+<p>Se ve:</p>
+<table style="border-collapse: collapse;">
+<tr><th style="border: 1px solid #999; padding: 4px 8px;">Nombre</th><th style="border: 1px solid #999; padding: 4px 8px;">Precio</th></tr>
+<tr><td style="border: 1px solid #999; padding: 4px 8px;">Pan</td><td style="border: 1px solid #999; padding: 4px 8px;">1 €</td></tr>
+<tr><td style="border: 1px solid #999; padding: 4px 8px;">Leche</td><td style="border: 1px solid #999; padding: 4px 8px;">2 €</td></tr>
+</table>
+
+<h2>Signos que deben verse tal cual</h2>
+<p>Una barra invertida delante de <code>*</code>, de una comilla invertida o de <code>#</code> anula el formato.</p>
+<pre>\*esto no es cursiva\*
+\`esto no es código\`
+\# esto no es un título</pre>
+<p>Se ve: los signos *, ` y # como texto normal.</p>
+)manual");
     
-    
+    manualLabel->setTextFormat(Qt::RichText);
     manualLabel->setText(manualText);
     manualLabel->setWordWrap(true);
+    manualLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     manualLabel->setMargin(20);
     
     scrollArea->setWidget(manualLabel);
     scrollArea->setWidgetResizable(true);
     
     layout->addWidget(scrollArea);
+
+    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    buttonLayout->addStretch();
+    QPushButton* closeButton = new QPushButton("Cerrar", manualDialog);
+    connect(closeButton, &QPushButton::clicked, manualDialog, &QDialog::accept);
+    buttonLayout->addWidget(closeButton);
+    layout->addLayout(buttonLayout);
     
     manualDialog->exec();
+    delete manualDialog;
 }
 
 void MarkdownEditor::showAbout() {
